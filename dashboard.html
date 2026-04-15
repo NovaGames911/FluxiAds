@@ -1,0 +1,2402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FluxiAds — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-main:        #0a0a0f;
+      --bg-card:        #12111a;
+      --bg-surface:     #1c1a2e;
+      --bg-sidebar:     #0d0c16;
+      --accent:         #7c3aed;
+      --accent-mid:     #8b5cf6;
+      --accent-light:   #a78bfa;
+      --teal:           #06b6d4;
+      --green:          #10b981;
+      --red:            #ef4444;
+      --text-primary:   #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted:     #475569;
+      --border:         rgba(124,58,237,0.15);
+      --border-hover:   rgba(124,58,237,0.35);
+      --sidebar-w:      230px;
+      --topbar-h:       64px;
+    }
+
+    html, body {
+      height: 100dvh;
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg-main);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 99px; }
+
+    /* ═══════════════════════════════════════════════
+       LAYOUT SHELL
+    ═══════════════════════════════════════════════ */
+    .app {
+      display: flex;
+      height: 100dvh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ──────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      height: 100dvh;
+      background: var(--bg-sidebar);
+      border-right: 1px solid rgba(124,58,237,0.12);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      z-index: 20;
+    }
+
+    /* Ambient glow */
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 100%; height: 260px;
+      background: linear-gradient(to top, rgba(124,58,237,0.06), transparent);
+      pointer-events: none;
+    }
+
+    /* Sidebar — top brand block */
+    .sidebar-brand {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid rgba(124,58,237,0.1);
+      flex-shrink: 0;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .brand-wordmark {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      user-select: none;
+    }
+    .brand-wordmark .fluxi { color: var(--text-primary); }
+    .brand-wordmark .ads {
+      background: linear-gradient(135deg, var(--accent-mid), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .beta-badge {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-light);
+      background: rgba(124,58,237,0.12);
+      border: 1px solid rgba(124,58,237,0.22);
+      border-radius: 20px;
+      padding: 2px 7px;
+      margin-top: 1px;
+    }
+
+    /* User avatar */
+    .user-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-mid));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+
+    .user-email {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 140px;
+    }
+
+    /* Sidebar — scrollable nav area */
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 12px 0;
+    }
+
+    .nav-group {
+      margin-bottom: 4px;
+    }
+
+    .nav-group-label {
+      font-size: 9.5px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 10px 18px 5px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 0;
+      text-decoration: none;
+      transition: color 0.15s, background 0.15s;
+      position: relative;
+      user-select: none;
+    }
+
+    .nav-item:hover {
+      color: var(--text-primary);
+      background: rgba(124,58,237,0.07);
+    }
+
+    .nav-item.active {
+      color: var(--accent-light);
+      background: rgba(124,58,237,0.12);
+      font-weight: 500;
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 20%; bottom: 20%;
+      width: 2px;
+      background: var(--accent);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .nav-icon {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .nav-item.active .nav-icon { opacity: 1; }
+
+    /* Divider */
+    .sidebar-divider {
+      height: 1px;
+      background: rgba(124,58,237,0.1);
+      margin: 8px 16px;
+    }
+
+    /* Games section */
+    .games-section {
+      padding: 0 0 8px;
+    }
+
+    .games-label {
+      font-size: 9.5px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 10px 18px 5px;
+    }
+
+    .game-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 18px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+      user-select: none;
+    }
+
+    .game-item:hover {
+      color: var(--text-primary);
+      background: rgba(124,58,237,0.07);
+    }
+
+    .game-item.active {
+      color: var(--accent-light);
+      background: rgba(124,58,237,0.12);
+      font-weight: 500;
+    }
+
+    .game-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .game-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Games list placeholder */
+    .games-list { min-height: 20px; }
+
+    .game-skeleton {
+      height: 30px;
+      margin: 3px 18px;
+      border-radius: 6px;
+      background: rgba(124,58,237,0.06);
+      animation: shimmer 1.6s ease infinite;
+    }
+
+    @keyframes shimmer {
+      0%, 100% { opacity: 0.5; }
+      50%       { opacity: 1; }
+    }
+
+    /* Add Game button */
+    .add-game-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 12px 4px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1px dashed rgba(124,58,237,0.2);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      width: calc(100% - 24px);
+    }
+
+    .add-game-btn:hover {
+      color: var(--accent-light);
+      border-color: rgba(124,58,237,0.4);
+      background: rgba(124,58,237,0.06);
+    }
+
+    /* Sidebar — bottom logout */
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid rgba(124,58,237,0.1);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logout-btn {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 12.5px;
+      font-weight: 400;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: color 0.15s, background 0.15s;
+      text-align: left;
+    }
+
+    .logout-btn:hover {
+      color: var(--red);
+      background: rgba(239,68,68,0.07);
+    }
+
+    /* ── Main area ─────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* ── Top bar ───────────────────────────────────── */
+    .topbar {
+      height: var(--topbar-h);
+      min-height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      border-bottom: 1px solid rgba(124,58,237,0.1);
+      background: rgba(10,10,15,0.95);
+      flex-shrink: 0;
+      gap: 16px;
+    }
+
+    .topbar-left { min-width: 0; }
+
+    .topbar-game-name {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+      text-wrap: balance;
+    }
+
+    .topbar-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      margin-top: 2px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    /* Live badge */
+    .badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.2);
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border-radius: 20px;
+      padding: 5px 11px;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: livePulse 1.8s ease infinite;
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+      50%       { opacity: 0.7; box-shadow: 0 0 0 4px rgba(16,185,129,0); }
+    }
+
+    /* Ghost button */
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1px solid rgba(124,58,237,0.3);
+      color: var(--accent-light);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 10px;
+      padding: 7px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(124,58,237,0.6);
+      background: rgba(124,58,237,0.08);
+      color: #fff;
+    }
+
+    /* Primary button */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, var(--accent), #6d28d9);
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: filter 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-primary:active { filter: brightness(0.95); transform: none; }
+
+    /* ── Content area ──────────────────────────────── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      animation: fadeSlideUp 0.35s ease both;
+    }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Stats Row ─────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      transition: border-color 0.2s, transform 0.2s, background 0.2s;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card:hover {
+      border-color: var(--border-hover);
+      transform: scale(1.01);
+      background: #13121c;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      filter: blur(28px);
+      opacity: 0.18;
+      pointer-events: none;
+    }
+
+    .stat-card.purple::before { background: var(--accent); }
+    .stat-card.teal::before   { background: var(--teal); }
+    .stat-card.green::before  { background: var(--green); }
+    .stat-card.mixed::before  { background: var(--accent-mid); }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .stat-value {
+      font-size: 30px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-card.purple .stat-value { color: var(--accent-light); }
+    .stat-card.teal   .stat-value { color: var(--teal); }
+    .stat-card.green  .stat-value { color: var(--green); }
+    .stat-card.mixed  .stat-value { color: var(--accent-mid); }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Skeleton loading state */
+    .skeleton {
+      background: linear-gradient(90deg,
+        rgba(124,58,237,0.06) 25%,
+        rgba(124,58,237,0.12) 50%,
+        rgba(124,58,237,0.06) 75%);
+      background-size: 200% 100%;
+      animation: skeletonShimmer 1.6s ease infinite;
+      border-radius: 6px;
+      color: transparent !important;
+      user-select: none;
+    }
+
+    @keyframes skeletonShimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Charts Row ────────────────────────────────── */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 16px;
+    }
+
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+
+    .chart-card:hover { border-color: var(--border-hover); }
+
+    .chart-title {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* Bar chart placeholder */
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      height: 120px;
+    }
+
+    .bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .bar {
+      width: 100%;
+      border-radius: 4px 4px 0 0;
+      background: linear-gradient(180deg, var(--accent-mid), var(--accent));
+      min-height: 4px;
+      opacity: 0.7;
+      transform-origin: bottom;
+    }
+
+    .bar-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+
+    /* Donut chart placeholder */
+    .donut-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .donut-svg-wrap {
+      position: relative;
+      width: 110px;
+      height: 110px;
+    }
+
+    .donut-center-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .donut-center-value {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+    }
+
+    .donut-center-sub {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .donut-legend {
+      display: flex;
+      gap: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Ad Packs Table ────────────────────────────── */
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .table-count {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(124,58,237,0.1);
+      border-radius: 20px;
+      padding: 2px 9px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 11px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(124,58,237,0.08);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 13px 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(124,58,237,0.05);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    tbody tr {
+      transition: background 0.15s;
+    }
+
+    tbody tr:hover { background: rgba(124,58,237,0.04); }
+
+    /* Type badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .badge-rewarded {
+      background: rgba(124,58,237,0.15);
+      color: var(--accent-light);
+    }
+
+    .badge-interstitial {
+      background: rgba(6,182,212,0.12);
+      color: var(--teal);
+    }
+
+    /* Toggle */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+    }
+
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-surface);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 99px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .toggle input:checked + .toggle-track {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
+    }
+
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+    /* Three-dot menu */
+    .menu-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px 6px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-btn:hover {
+      color: var(--text-primary);
+      background: rgba(124,58,237,0.1);
+    }
+
+    /* Empty state */
+    .table-empty {
+      text-align: center;
+      padding: 52px 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .table-empty-icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    /* ── Unity Endpoint Card ────────────────────────── */
+    .endpoint-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .endpoint-card:hover { border-color: var(--border-hover); }
+
+    .endpoint-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .endpoint-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+      animation: livePulse 1.8s ease infinite;
+    }
+
+    .endpoint-info { min-width: 0; }
+
+    .endpoint-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .endpoint-url {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: var(--accent-light);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 500px;
+    }
+
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1px solid rgba(124,58,237,0.3);
+      color: var(--accent-light);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 8px;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .copy-btn:hover {
+      border-color: rgba(124,58,237,0.55);
+      background: rgba(124,58,237,0.08);
+      color: #fff;
+    }
+
+    .copy-btn.copied {
+      color: var(--green);
+      border-color: rgba(16,185,129,0.4);
+      background: rgba(16,185,129,0.07);
+    }
+
+    /* ══════════════════════════════════════════════
+       NEW AD SLIDE-IN PANEL
+    ══════════════════════════════════════════════ */
+    .panel-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 40;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .panel-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .slide-panel {
+      position: fixed;
+      top: 0; right: 0;
+      width: 420px;
+      height: 100dvh;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      overflow: hidden;
+    }
+
+    .slide-panel.open { transform: translateX(0); }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .panel-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .panel-close:hover {
+      color: var(--text-primary);
+      background: rgba(124,58,237,0.1);
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* Panel form fields */
+    .panel-field { display: flex; flex-direction: column; gap: 7px; }
+
+    .panel-label {
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    .panel-input {
+      background: var(--bg-surface);
+      border: 1px solid rgba(124,58,237,0.2);
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      border-radius: 10px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+
+    .panel-input::placeholder { color: var(--text-muted); }
+
+    .panel-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+    }
+
+    /* Type toggle buttons */
+    .type-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .type-btn {
+      padding: 9px 14px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12.5px;
+      font-weight: 500;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      border: 1px solid rgba(124,58,237,0.2);
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .type-btn.active-rewarded {
+      background: rgba(124,58,237,0.15);
+      border-color: var(--accent);
+      color: var(--accent-light);
+    }
+
+    .type-btn.active-interstitial {
+      background: rgba(6,182,212,0.12);
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    /* Priority input */
+    .priority-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .priority-row .panel-input { width: 70px; text-align: center; }
+
+    .priority-hint { font-size: 11px; color: var(--text-muted); }
+
+    /* Mix ads toggle row */
+    .mix-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--bg-surface);
+      border: 1px solid rgba(124,58,237,0.12);
+      border-radius: 10px;
+    }
+
+    .mix-info { }
+    .mix-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .mix-hint  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Panel error */
+    .panel-error {
+      display: none;
+      padding: 9px 12px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 12.5px;
+    }
+
+    .panel-error.visible { display: block; }
+
+    /* Panel footer */
+    .panel-footer {
+      padding: 16px 24px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .panel-footer .btn-primary { flex: 1; justify-content: center; }
+    .panel-footer .btn-ghost   { flex-shrink: 0; }
+
+    /* ══════════════════════════════════════════════
+       ADD GAME MODAL
+    ══════════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 380px;
+      transform: scale(0.96) translateY(8px);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+
+    .modal-field { margin-bottom: 14px; }
+
+    .modal-field label {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 7px;
+    }
+
+    .modal-field input {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid rgba(124,58,237,0.2);
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      border-radius: 10px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .modal-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+    }
+
+    .modal-field input::placeholder { color: var(--text-muted); }
+
+    .modal-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+
+    .modal-error {
+      display: none;
+      padding: 9px 12px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 12px;
+      margin-bottom: 14px;
+    }
+
+    .modal-error.visible { display: block; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .modal-actions .btn-primary { flex: 1; justify-content: center; }
+
+    /* ══════════════════════════════════════════════
+       CONTEXT MENU (··· dropdown)
+    ══════════════════════════════════════════════ */
+    .ctx-menu {
+      position: fixed;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px;
+      min-width: 140px;
+      z-index: 70;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+      display: none;
+    }
+
+    .ctx-menu.open { display: block; }
+
+    .ctx-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .ctx-item:hover { background: rgba(124,58,237,0.1); color: var(--text-primary); }
+    .ctx-item.danger:hover { background: rgba(239,68,68,0.08); color: var(--red); }
+
+    /* ══════════════════════════════════════════════
+       VIEWS (Dashboard, Analytics, Settings, etc.)
+    ══════════════════════════════════════════════ */
+    .view { display: none; flex-direction: column; gap: 24px; }
+    .view.active { display: flex; }
+
+    /* Settings view */
+    .settings-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 560px;
+    }
+
+    .settings-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .settings-field { margin-bottom: 16px; }
+
+    .settings-field label {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 7px;
+    }
+
+    .settings-field input {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid rgba(124,58,237,0.2);
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      border-radius: 10px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .settings-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+    }
+
+    .settings-field input::placeholder { color: var(--text-muted); }
+
+    .settings-success {
+      display: none;
+      padding: 9px 12px;
+      background: rgba(16,185,129,0.08);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 8px;
+      color: var(--green);
+      font-size: 12.5px;
+      margin-bottom: 16px;
+    }
+
+    .settings-success.visible { display: block; }
+
+    /* ══════════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════════ */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .charts-row { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .sidebar { display: none; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .slide-panel { width: 100%; }
+      .topbar { padding: 0 16px; }
+      .content { padding: 16px; }
+      .endpoint-url { max-width: 200px; }
+    }
+
+    /* ── Analytics ──────────────────────────────── */
+    .range-btn {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(124,58,237,0.2);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .range-btn:hover { color: var(--text-primary); border-color: rgba(124,58,237,0.4); }
+    .range-btn.active {
+      background: rgba(124,58,237,0.15);
+      border-color: var(--accent);
+      color: var(--accent-light);
+    }
+
+    .a-bar-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      min-width: 32px;
+    }
+
+    .a-bar-pair {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 110px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .a-bar-imp, .a-bar-clk {
+      width: 10px;
+      border-radius: 3px 3px 0 0;
+      min-height: 2px;
+      transform-origin: bottom;
+    }
+
+    .a-bar-imp { background: var(--accent-mid); opacity: 0.85; }
+    .a-bar-clk { background: var(--teal);        opacity: 0.85; }
+
+    .a-bar-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .event-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      background: rgba(124,58,237,0.04);
+      border: 1px solid rgba(124,58,237,0.06);
+      flex-shrink: 0;
+    }
+
+    .event-dot-imp { width:7px;height:7px;border-radius:50%;background:var(--accent-mid);flex-shrink:0; }
+    .event-dot-clk { width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0; }
+
+    .event-type { font-size:11px;font-weight:500;color:var(--text-secondary);min-width:70px; }
+    .event-id   { font-family:monospace;font-size:10px;color:var(--accent-light);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .event-time { font-size:10px;color:var(--text-muted);flex-shrink:0; }
+
+    /* ── Toast notification ─────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      right: max(24px, env(safe-area-inset-right));
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text-primary);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+      z-index: 100;
+      transform: translateY(12px);
+      opacity: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: rgba(16,185,129,0.3); }
+    .toast.error   { border-color: rgba(239,68,68,0.3); }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     APP SHELL
+═══════════════════════════════════════════════════ -->
+<div class="app">
+
+  <!-- ── SIDEBAR ────────────────────────────────────── -->
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+
+    <!-- Brand + user -->
+    <div class="sidebar-brand">
+      <div class="brand-row">
+        <div class="brand-wordmark" aria-label="FluxiAds">
+          <span class="fluxi">Fluxi</span><span class="ads">Ads</span>
+        </div>
+        <span class="beta-badge">Beta</span>
+      </div>
+      <div class="user-block">
+        <div class="user-avatar" id="userAvatar" aria-hidden="true">??</div>
+        <span class="user-email" id="userEmail">loading…</span>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="sidebar-nav" aria-label="Navigation">
+
+      <div class="nav-group">
+        <div class="nav-group-label">Overview</div>
+        <a class="nav-item active" data-view="dashboard" href="#" role="menuitem">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <a class="nav-item" data-view="analytics" href="#" role="menuitem">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Analytics
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Campaigns</div>
+        <a class="nav-item" data-view="adpacks" href="#" role="menuitem">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Ad Packs
+        </a>
+        <a class="nav-item" data-view="creatives" href="#" role="menuitem">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Creatives
+        </a>
+        <a class="nav-item" data-view="settings" href="#" role="menuitem">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </a>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- Games section -->
+      <div class="games-section">
+        <div class="games-label">Games</div>
+        <div class="games-list" id="gamesList">
+          <div class="game-skeleton"></div>
+          <div class="game-skeleton" style="opacity:0.6"></div>
+        </div>
+        <button class="add-game-btn" id="addGameBtn" aria-label="Add new game">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Game
+        </button>
+      </div>
+
+    </nav>
+
+    <!-- Logout -->
+    <div class="sidebar-footer">
+      <button class="logout-btn" id="logoutBtn" aria-label="Sign out">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign out
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ─────────────────────────────────────── -->
+  <div class="main">
+
+    <!-- Top bar -->
+    <header class="topbar" role="banner">
+      <div class="topbar-left">
+        <div class="topbar-game-name" id="topbarGameName">Select a game</div>
+        <div class="topbar-subtitle">Ad campaign manager</div>
+      </div>
+      <div class="topbar-right">
+        <span class="badge-live" aria-label="System live">
+          <span class="live-dot" aria-hidden="true"></span>
+          Live
+        </span>
+        <button class="btn-ghost" id="exportJsonBtn" aria-label="Export JSON">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export JSON
+        </button>
+        <button class="btn-primary" id="newAdBtn" aria-label="Create new ad">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Ad
+        </button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="content" id="mainContent" role="main">
+
+      <!-- ══ VIEW: Dashboard ══ -->
+      <div class="view active" id="view-dashboard">
+
+        <!-- Stats Row -->
+        <div class="stats-row" role="list" aria-label="Key metrics">
+
+          <div class="stat-card purple" role="listitem">
+            <div class="stat-label">Impressions Today</div>
+            <div class="stat-value" id="statImpressions">—</div>
+            <div class="stat-sub" id="statImpSub">Loading…</div>
+          </div>
+
+          <div class="stat-card teal" role="listitem">
+            <div class="stat-label">Clicks Today</div>
+            <div class="stat-value" id="statClicks">—</div>
+            <div class="stat-sub" id="statClickSub">Loading…</div>
+          </div>
+
+          <div class="stat-card green" role="listitem">
+            <div class="stat-label">CTR %</div>
+            <div class="stat-value" id="statCTR">—</div>
+            <div class="stat-sub">click-through rate</div>
+          </div>
+
+          <div class="stat-card mixed" role="listitem">
+            <div class="stat-label">Active Ads</div>
+            <div class="stat-value" id="statActiveAds">—</div>
+            <div class="stat-sub" id="statAdTypes">—</div>
+          </div>
+
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+
+          <!-- 7-day bar chart -->
+          <div class="chart-card">
+            <div class="chart-title">7-Day Impressions</div>
+            <div class="bar-chart" id="barChart" aria-label="7-day impressions bar chart" role="img">
+              <!-- Filled by dashboard.js -->
+              <div class="bar-col"><div class="bar skeleton" style="height:40%"></div><div class="bar-label">—</div></div>
+              <div class="bar-col"><div class="bar skeleton" style="height:60%"></div><div class="bar-label">—</div></div>
+              <div class="bar-col"><div class="bar skeleton" style="height:50%"></div><div class="bar-label">—</div></div>
+              <div class="bar-col"><div class="bar skeleton" style="height:80%"></div><div class="bar-label">—</div></div>
+              <div class="bar-col"><div class="bar skeleton" style="height:45%"></div><div class="bar-label">—</div></div>
+              <div class="bar-col"><div class="bar skeleton" style="height:70%"></div><div class="bar-label">—</div></div>
+              <div class="bar-col"><div class="bar skeleton" style="height:90%"></div><div class="bar-label">—</div></div>
+            </div>
+          </div>
+
+          <!-- Donut chart -->
+          <div class="chart-card">
+            <div class="chart-title">Ad Type Split</div>
+            <div class="donut-wrap">
+              <div class="donut-svg-wrap">
+                <svg width="110" height="110" viewBox="0 0 110 110" aria-label="Ad type distribution donut chart" role="img">
+                  <!-- Background ring -->
+                  <circle cx="55" cy="55" r="40" fill="none" stroke="rgba(124,58,237,0.1)" stroke-width="16"/>
+                  <!-- Rewarded arc -->
+                  <circle id="donutRewarded" cx="55" cy="55" r="40" fill="none"
+                    stroke="#8b5cf6" stroke-width="16"
+                    stroke-dasharray="0 251.2"
+                    stroke-linecap="round"
+                    transform="rotate(-90 55 55)"
+                    style="transition: stroke-dasharray 1s cubic-bezier(0.34,1.56,0.64,1)"/>
+                  <!-- Interstitial arc -->
+                  <circle id="donutInterstitial" cx="55" cy="55" r="40" fill="none"
+                    stroke="#06b6d4" stroke-width="16"
+                    stroke-dasharray="0 251.2"
+                    stroke-linecap="round"
+                    transform="rotate(-90 55 55)"
+                    style="transition: stroke-dasharray 1s cubic-bezier(0.34,1.56,0.64,1) 0.1s"/>
+                </svg>
+                <div class="donut-center-label">
+                  <div class="donut-center-value" id="donutTotal">0</div>
+                  <div class="donut-center-sub">Total</div>
+                </div>
+              </div>
+              <div class="donut-legend">
+                <div class="legend-item">
+                  <div class="legend-dot" style="background:#8b5cf6"></div>
+                  <span id="legendRewarded">Rewarded</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-dot" style="background:#06b6d4"></div>
+                  <span id="legendInterstitial">Interstitial</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Ad Packs Table -->
+        <div class="table-card">
+          <div class="table-header">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="table-title">Ad Packs</span>
+              <span class="table-count" id="adCount">0</span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table aria-label="Ad packs">
+              <thead>
+                <tr>
+                  <th>Ad</th>
+                  <th>Type</th>
+                  <th>Priority</th>
+                  <th>Active</th>
+                  <th>Impressions</th>
+                  <th>Clicks</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="adsTableBody">
+                <tr>
+                  <td colspan="7">
+                    <div class="table-empty">
+                      <div class="table-empty-icon">📦</div>
+                      Select a game to load ad packs
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Unity Endpoint Card -->
+        <div class="endpoint-card" role="region" aria-label="Unity JSON endpoint">
+          <div class="endpoint-left">
+            <div class="endpoint-live-dot" aria-hidden="true"></div>
+            <div class="endpoint-info">
+              <div class="endpoint-label">Unity Endpoint</div>
+              <div class="endpoint-url" id="endpointUrl">Select a game to see the JSON URL</div>
+            </div>
+          </div>
+          <button class="copy-btn" id="copyEndpointBtn" aria-label="Copy endpoint URL">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+
+      </div><!-- /view-dashboard -->
+
+      <!-- ══ VIEW: Analytics ══ -->
+      <div class="view" id="view-analytics">
+
+        <!-- Range selector -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:18px;font-weight:600;letter-spacing:-0.02em">Analytics</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Events tracked directly from your Unity games</div>
+          </div>
+          <div style="display:flex;gap:6px" role="group" aria-label="Date range">
+            <button class="range-btn active" data-days="7"  onclick="setAnalyticsRange(7,  this)">7 days</button>
+            <button class="range-btn"        data-days="30" onclick="setAnalyticsRange(30, this)">30 days</button>
+            <button class="range-btn"        data-days="90" onclick="setAnalyticsRange(90, this)">90 days</button>
+          </div>
+        </div>
+
+        <!-- Stat cards -->
+        <div class="stats-row">
+          <div class="stat-card purple">
+            <div class="stat-label">Total Impressions</div>
+            <div class="stat-value" id="aStatImpressions">—</div>
+            <div class="stat-sub" id="aStatImpDelta"></div>
+          </div>
+          <div class="stat-card teal">
+            <div class="stat-label">Total Clicks</div>
+            <div class="stat-value" id="aStatClicks">—</div>
+            <div class="stat-sub" id="aStatClickDelta"></div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">Overall CTR</div>
+            <div class="stat-value" id="aStatCTR">—</div>
+            <div class="stat-sub">click-through rate</div>
+          </div>
+          <div class="stat-card mixed">
+            <div class="stat-label">Unique Ads Served</div>
+            <div class="stat-value" id="aStatUniqueAds">—</div>
+            <div class="stat-sub">distinct ad IDs seen</div>
+          </div>
+        </div>
+
+        <!-- Dual bar chart (impressions vs clicks per day) -->
+        <div class="chart-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+            <div class="chart-title" style="margin:0">Impressions vs Clicks</div>
+            <div style="display:flex;gap:16px">
+              <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)">
+                <div style="width:10px;height:10px;border-radius:2px;background:var(--accent-mid)"></div>Impressions
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)">
+                <div style="width:10px;height:10px;border-radius:2px;background:var(--teal)"></div>Clicks
+              </div>
+            </div>
+          </div>
+          <div id="aBarChart" style="display:flex;align-items:flex-end;gap:6px;height:140px;overflow-x:auto;padding-bottom:4px"
+               role="img" aria-label="Impressions vs clicks over time"></div>
+        </div>
+
+        <!-- Bottom row: top ads + recent events -->
+        <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px">
+
+          <!-- Top ads table -->
+          <div class="table-card">
+            <div class="table-header">
+              <span class="table-title">Top Ads by Impressions</span>
+            </div>
+            <div class="table-wrap">
+              <table aria-label="Top performing ads">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Ad</th>
+                    <th>Type</th>
+                    <th>Impressions</th>
+                    <th>Clicks</th>
+                    <th>CTR</th>
+                  </tr>
+                </thead>
+                <tbody id="aTopAdsBody">
+                  <tr><td colspan="6"><div class="table-empty">
+                    <div class="table-empty-icon">📊</div>Select a game
+                  </div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Recent events feed -->
+          <div class="chart-card" style="display:flex;flex-direction:column">
+            <div class="chart-title">Recent Events</div>
+            <div id="aEventsFeed" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;max-height:260px">
+              <div style="font-size:12px;color:var(--text-muted);text-align:center;padding:24px 0">No events yet</div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /view-analytics -->
+
+      <!-- ══ VIEW: Ad Packs ══ -->
+      <div class="view" id="view-adpacks">
+        <div class="table-card" style="padding:48px;text-align:center">
+          <div style="font-size:28px;margin-bottom:12px;opacity:0.3">📦</div>
+          <div style="font-size:14px;color:var(--text-muted)">Ad packs view — managed from Dashboard</div>
+        </div>
+      </div>
+
+      <!-- ══ VIEW: Creatives ══ -->
+      <div class="view" id="view-creatives">
+        <div class="table-card" style="padding:48px;text-align:center">
+          <div style="font-size:28px;margin-bottom:12px;opacity:0.3">🎨</div>
+          <div style="font-size:14px;color:var(--text-muted)">Creatives view coming soon</div>
+        </div>
+      </div>
+
+      <!-- ══ VIEW: Settings ══ -->
+      <div class="view" id="view-settings">
+        <div class="settings-card">
+          <div class="settings-title">Connection Settings</div>
+          <div class="settings-success" id="settingsSuccess">Settings saved successfully.</div>
+
+          <div class="settings-field">
+            <label for="setSupabaseUrl">Supabase URL</label>
+            <input type="url" id="setSupabaseUrl" placeholder="https://xxxx.supabase.co" autocomplete="off" />
+          </div>
+          <div class="settings-field">
+            <label for="setSupabaseKey">Supabase Anon Key</label>
+            <input type="password" id="setSupabaseKey" placeholder="eyJhbGci…" autocomplete="off" />
+          </div>
+          <div class="settings-field">
+            <label for="setGithubToken">GitHub Personal Access Token</label>
+            <input type="password" id="setGithubToken" placeholder="ghp_…" autocomplete="off" />
+          </div>
+          <div class="settings-field">
+            <label for="setGithubRepo">GitHub Repo</label>
+            <input type="text" id="setGithubRepo" placeholder="username/repo" autocomplete="off" />
+          </div>
+
+          <button class="btn-primary" id="saveSettingsBtn" style="margin-top:8px">Save Settings</button>
+        </div>
+      </div>
+
+    </main><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════════════
+     NEW AD SLIDE-IN PANEL
+═══════════════════════════════════════════════════ -->
+<div class="panel-overlay" id="panelOverlay" aria-hidden="true"></div>
+<div class="slide-panel" id="slidePanel" role="dialog" aria-modal="true" aria-label="New Ad" aria-hidden="true">
+  <div class="panel-header">
+    <div class="panel-title" id="panelTitle">New Ad</div>
+    <button class="panel-close" id="panelClose" aria-label="Close panel">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="panel-body" id="panelBody">
+
+    <div class="panel-field">
+      <label class="panel-label" for="adName">Ad Name</label>
+      <input class="panel-input" type="text" id="adName" placeholder="e.g. Summer Campaign Video" />
+    </div>
+
+    <div class="panel-field">
+      <label class="panel-label">Type</label>
+      <div class="type-toggle" role="group" aria-label="Ad type">
+        <button class="type-btn active-rewarded" id="typeRewarded" data-type="rewarded">Rewarded</button>
+        <button class="type-btn" id="typeInterstitial" data-type="interstitial">Interstitial</button>
+      </div>
+      <input type="hidden" id="adType" value="rewarded" />
+    </div>
+
+    <div class="panel-field" id="videoField">
+      <label class="panel-label" for="adVideoUrl">Video URL <span style="color:var(--text-muted);font-size:9px;text-transform:none;letter-spacing:0">(rewarded)</span></label>
+      <input class="panel-input" type="url" id="adVideoUrl" placeholder="https://…" />
+    </div>
+
+    <div class="panel-field">
+      <label class="panel-label" for="adImageUrl">Image URL</label>
+      <input class="panel-input" type="url" id="adImageUrl" placeholder="https://…" />
+    </div>
+
+    <div class="panel-field">
+      <label class="panel-label" for="adClickUrl">Click URL <span style="color:var(--red);font-size:9px">*</span></label>
+      <input class="panel-input" type="url" id="adClickUrl" placeholder="https://…" />
+    </div>
+
+    <div class="panel-field">
+      <label class="panel-label" for="adPriority">Priority</label>
+      <div class="priority-row">
+        <input class="panel-input" type="number" id="adPriority" min="1" max="10" value="1" />
+        <span class="priority-hint">1 (highest) → 10 (lowest)</span>
+      </div>
+    </div>
+
+    <div class="mix-row">
+      <div class="mix-info">
+        <div class="mix-label">Mix Ads</div>
+        <div class="mix-hint">Show alongside other ad networks</div>
+      </div>
+      <label class="toggle" aria-label="Mix ads toggle">
+        <input type="checkbox" id="adMixAds" checked />
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+
+    <div class="panel-error" id="panelError" role="alert"></div>
+
+  </div>
+  <div class="panel-footer">
+    <button class="btn-ghost" id="panelCancelBtn">Cancel</button>
+    <button class="btn-primary" id="panelSaveBtn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      Save Ad
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ADD GAME MODAL
+═══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalOverlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-title" id="modalTitle">Add Game</div>
+    <div class="modal-error" id="modalError" role="alert"></div>
+    <div class="modal-field">
+      <label for="gameName">Game Name</label>
+      <input type="text" id="gameName" placeholder="e.g. Space Blaster" autocomplete="off" />
+    </div>
+    <div class="modal-field">
+      <label for="gameSlug">Slug <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;font-size:11px">(used in JSON URL)</span></label>
+      <input type="text" id="gameSlug" placeholder="e.g. space-blaster" autocomplete="off" />
+      <div class="modal-hint">Lowercase letters, numbers, hyphens only</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="modalCancelBtn">Cancel</button>
+      <button class="btn-primary" id="modalSaveBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        Add Game
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Context menu -->
+<div class="ctx-menu" id="ctxMenu" role="menu" aria-label="Ad options">
+  <div class="ctx-item" id="ctxEdit" role="menuitem">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Edit
+  </div>
+  <div class="ctx-item danger" id="ctxDelete" role="menuitem">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    Delete
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ══════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════ -->
+<script src="assets/js/supabase.js"></script>
+<script src="assets/js/auth.js"></script>
+
+<script>
+// ── Shell UI interactions (nav, panel, modal, copy, settings)
+// Data loading wired in dashboard.js / ads.js (future steps)
+
+// ── Auth guard ────────────────────────────────────
+let currentUser = null;
+let currentSession = null;
+
+(async () => {
+  const session = await requireAuth();
+  if (!session) return;
+  currentSession = session;
+  currentUser = session.user;
+
+  // Populate user info in sidebar
+  const email = currentUser.email || '';
+  document.getElementById('userEmail').textContent = email;
+  const initials = email.slice(0, 2).toUpperCase();
+  document.getElementById('userAvatar').textContent = initials;
+})();
+
+// ── Nav view switching ────────────────────────────
+const navItems = document.querySelectorAll('.nav-item[data-view]');
+const views    = document.querySelectorAll('.view');
+
+function switchView(viewId) {
+  views.forEach(v => v.classList.remove('active'));
+  navItems.forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('view-' + viewId);
+  if (target) target.classList.add('active');
+  const navEl = document.querySelector(`.nav-item[data-view="${viewId}"]`);
+  if (navEl) navEl.classList.add('active');
+}
+
+navItems.forEach(item => {
+  item.addEventListener('click', e => {
+    e.preventDefault();
+    switchView(item.dataset.view);
+  });
+});
+
+// ── Slide panel (New Ad) ──────────────────────────
+const slidePanel  = document.getElementById('slidePanel');
+const panelOverlay = document.getElementById('panelOverlay');
+
+function openPanel(title = 'New Ad') {
+  document.getElementById('panelTitle').textContent = title;
+  slidePanel.classList.add('open');
+  panelOverlay.classList.add('open');
+  slidePanel.setAttribute('aria-hidden', 'false');
+  panelOverlay.setAttribute('aria-hidden', 'false');
+  document.getElementById('adName').focus();
+}
+
+function closePanel() {
+  slidePanel.classList.remove('open');
+  panelOverlay.classList.remove('open');
+  slidePanel.setAttribute('aria-hidden', 'true');
+  panelOverlay.setAttribute('aria-hidden', 'true');
+  clearPanelError();
+}
+
+document.getElementById('newAdBtn').addEventListener('click', () => openPanel('New Ad'));
+document.getElementById('panelClose').addEventListener('click', closePanel);
+document.getElementById('panelCancelBtn').addEventListener('click', closePanel);
+panelOverlay.addEventListener('click', closePanel);
+
+// Escape key closes panel / modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closePanel(); closeModal(); closeCtxMenu(); }
+});
+
+// Panel error helpers
+function showPanelError(msg) {
+  const el = document.getElementById('panelError');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+function clearPanelError() {
+  const el = document.getElementById('panelError');
+  el.classList.remove('visible');
+  el.textContent = '';
+}
+
+// Ad type toggle
+const typeRewarded     = document.getElementById('typeRewarded');
+const typeInterstitial = document.getElementById('typeInterstitial');
+const adTypeInput      = document.getElementById('adType');
+const videoField       = document.getElementById('videoField');
+
+function setAdType(type) {
+  adTypeInput.value = type;
+  typeRewarded.className     = 'type-btn' + (type === 'rewarded'     ? ' active-rewarded'     : '');
+  typeInterstitial.className = 'type-btn' + (type === 'interstitial' ? ' active-interstitial' : '');
+  videoField.style.display   = type === 'rewarded' ? '' : 'none';
+}
+
+typeRewarded.addEventListener('click',     () => setAdType('rewarded'));
+typeInterstitial.addEventListener('click', () => setAdType('interstitial'));
+
+// ── Add Game modal ────────────────────────────────
+const modalOverlay = document.getElementById('modalOverlay');
+
+function openModal() {
+  modalOverlay.classList.add('open');
+  modalOverlay.setAttribute('aria-hidden', 'false');
+  document.getElementById('gameName').focus();
+}
+
+function closeModal() {
+  modalOverlay.classList.remove('open');
+  modalOverlay.setAttribute('aria-hidden', 'true');
+  document.getElementById('gameName').value = '';
+  document.getElementById('gameSlug').value = '';
+  document.getElementById('modalError').classList.remove('visible');
+}
+
+document.getElementById('addGameBtn').addEventListener('click', openModal);
+document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+
+// Auto-slug from game name
+document.getElementById('gameName').addEventListener('input', e => {
+  const slugField = document.getElementById('gameSlug');
+  if (!slugField.dataset.manual) {
+    slugField.value = e.target.value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+});
+
+document.getElementById('gameSlug').addEventListener('input', e => {
+  e.target.dataset.manual = e.target.value ? 'true' : '';
+});
+
+// ── Context (···) menu ────────────────────────────
+const ctxMenu = document.getElementById('ctxMenu');
+let ctxAdId   = null;
+
+function openCtxMenu(e, adId) {
+  ctxAdId = adId;
+  ctxMenu.classList.add('open');
+  const x = Math.min(e.clientX, window.innerWidth - 160);
+  const y = Math.min(e.clientY, window.innerHeight - 100);
+  ctxMenu.style.left = x + 'px';
+  ctxMenu.style.top  = y + 'px';
+}
+
+function closeCtxMenu() {
+  ctxMenu.classList.remove('open');
+  ctxAdId = null;
+}
+
+document.addEventListener('click', e => {
+  if (!ctxMenu.contains(e.target)) closeCtxMenu();
+});
+
+// ── Copy endpoint URL ─────────────────────────────
+document.getElementById('copyEndpointBtn').addEventListener('click', async () => {
+  const url = document.getElementById('endpointUrl').textContent;
+  if (!url || url.includes('Select')) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    const btn = document.getElementById('copyEndpointBtn');
+    btn.classList.add('copied');
+    btn.textContent = 'Copied!';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+    }, 2000);
+  } catch {}
+});
+
+// ── Toast helper (global) ─────────────────────────
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Logout ────────────────────────────────────────
+document.getElementById('logoutBtn').addEventListener('click', logout);
+
+// ── Settings — load + save ────────────────────────
+(function loadSettings() {
+  document.getElementById('setSupabaseUrl').value   = localStorage.getItem('supabase_url')    || '';
+  document.getElementById('setSupabaseKey').value   = localStorage.getItem('supabase_anon_key') || '';
+  document.getElementById('setGithubToken').value   = localStorage.getItem('github_token')    || '';
+  document.getElementById('setGithubRepo').value    = localStorage.getItem('github_repo')     || '';
+})();
+
+document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+  localStorage.setItem('supabase_url',      document.getElementById('setSupabaseUrl').value.trim());
+  localStorage.setItem('supabase_anon_key', document.getElementById('setSupabaseKey').value.trim());
+  localStorage.setItem('github_token',      document.getElementById('setGithubToken').value.trim());
+  localStorage.setItem('github_repo',       document.getElementById('setGithubRepo').value.trim());
+  const s = document.getElementById('settingsSuccess');
+  s.classList.add('visible');
+  setTimeout(() => s.classList.remove('visible'), 3000);
+  showToast('Settings saved', 'success');
+});
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+let _analyticsDays = 7;
+
+// Trigger analytics load when switching to analytics view
+const _origSwitchView = switchView;
+window.switchView = function(viewId) {
+  _origSwitchView(viewId);
+  if (viewId === 'analytics' && window.currentGameId) loadAnalytics(window.currentGameId);
+};
+
+function setAnalyticsRange(days, btn) {
+  _analyticsDays = days;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (window.currentGameId) loadAnalytics(window.currentGameId);
+}
+
+async function loadAnalytics(gameId) {
+  if (!gameId) return;
+
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - (_analyticsDays - 1));
+  fromDate.setHours(0, 0, 0, 0);
+  const fromISO = fromDate.toISOString();
+
+  // Fetch events in range
+  const { data: events, error } = await sb
+    .from('events')
+    .select('ad_id, type, created_at')
+    .eq('game_id', gameId)
+    .gte('created_at', fromISO)
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('[Analytics]', error.message); return; }
+
+  const evts = events || [];
+
+  // ── Stat cards ──────────────────────────────────
+  const totalImp  = evts.filter(e => e.type === 'impression').length;
+  const totalClk  = evts.filter(e => e.type === 'click').length;
+  const ctr       = totalImp > 0 ? ((totalClk / totalImp) * 100).toFixed(1) : '0.0';
+  const uniqueAds = new Set(evts.map(e => e.ad_id)).size;
+
+  animateAnalyticsStat('aStatImpressions', totalImp);
+  animateAnalyticsStat('aStatClicks',      totalClk);
+  document.getElementById('aStatCTR').textContent       = ctr + '%';
+  animateAnalyticsStat('aStatUniqueAds',   uniqueAds);
+  document.getElementById('aStatImpDelta').textContent  = `last ${_analyticsDays} days`;
+  document.getElementById('aStatClickDelta').textContent= `last ${_analyticsDays} days`;
+
+  // ── Build daily buckets ───────────────────────
+  const days = [];
+  for (let i = _analyticsDays - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push({
+      date:  d.toISOString().slice(0, 10),
+      label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
+      short: d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }),
+      imp:   0,
+      clk:   0,
+    });
+  }
+
+  evts.forEach(e => {
+    const d = e.created_at.slice(0, 10);
+    const bucket = days.find(x => x.date === d);
+    if (!bucket) return;
+    if (e.type === 'impression') bucket.imp++;
+    else if (e.type === 'click') bucket.clk++;
+  });
+
+  renderAnalyticsChart(days);
+
+  // ── Top ads ────────────────────────────────────
+  const adMap = {};
+  evts.forEach(e => {
+    if (!adMap[e.ad_id]) adMap[e.ad_id] = { imp: 0, clk: 0 };
+    if (e.type === 'impression') adMap[e.ad_id].imp++;
+    else if (e.type === 'click') adMap[e.ad_id].clk++;
+  });
+
+  // Fetch ad names for the IDs we saw
+  const adIds = Object.keys(adMap);
+  let adNames = {};
+  if (adIds.length) {
+    const { data: adsData } = await sb
+      .from('ads')
+      .select('id, name, type')
+      .in('id', adIds);
+    (adsData || []).forEach(a => { adNames[a.id] = a; });
+  }
+
+  const topAds = adIds
+    .map(id => ({ id, ...adMap[id], ...adNames[id] }))
+    .sort((a, b) => b.imp - a.imp)
+    .slice(0, 8);
+
+  renderTopAds(topAds);
+
+  // ── Recent events feed ─────────────────────────
+  renderEventsFeed(evts.slice(0, 20), adNames);
+}
+
+function animateAnalyticsStat(elId, target) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (target === 0) { el.textContent = '0'; return; }
+  const dur = 600, start = performance.now();
+  (function step(now) {
+    const p = Math.min((now - start) / dur, 1);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.floor(target * e).toLocaleString();
+    if (p < 1) requestAnimationFrame(step);
+  })(start);
+}
+
+function renderAnalyticsChart(days) {
+  const maxImp = Math.max(...days.map(d => d.imp), 1);
+  const chartEl = document.getElementById('aBarChart');
+
+  // For >14 days show only every Nth label
+  const labelEvery = _analyticsDays > 14 ? 5 : 1;
+
+  chartEl.innerHTML = days.map((day, i) => {
+    const impPct = Math.max((day.imp / maxImp) * 110, day.imp > 0 ? 2 : 0);
+    const clkPct = Math.max((day.clk / maxImp) * 110, day.clk > 0 ? 2 : 0);
+    const showLabel = i % labelEvery === 0 || i === days.length - 1;
+    return `
+      <div class="a-bar-group" title="${day.date}: ${day.imp} imp, ${day.clk} clk">
+        <div class="a-bar-pair">
+          <div class="a-bar-imp"
+            style="height:${impPct}px;animation:barGrow 0.5s ease ${i * 0.02}s both"
+            aria-label="${day.imp} impressions"></div>
+          <div class="a-bar-clk"
+            style="height:${clkPct}px;animation:barGrow 0.5s ease ${i * 0.02}s both"
+            aria-label="${day.clk} clicks"></div>
+        </div>
+        <div class="a-bar-label">${showLabel ? day.short : ''}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderTopAds(ads) {
+  const tbody = document.getElementById('aTopAdsBody');
+  if (!ads.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="table-empty">
+      <div class="table-empty-icon">📊</div>No events in this period
+    </div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = ads.map((ad, i) => {
+    const ctr = ad.imp > 0 ? ((ad.clk / ad.imp) * 100).toFixed(1) + '%' : '—';
+    const name = ad.name || ad.id.slice(0, 8) + '…';
+    return `
+      <tr>
+        <td><span style="font-size:12px;color:var(--text-muted);font-weight:500">${i + 1}</span></td>
+        <td>
+          <div style="font-size:12px;font-weight:500;color:var(--text-primary);
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px"
+            title="${escapeHtmlAnalytics(name)}">${escapeHtmlAnalytics(name)}</div>
+        </td>
+        <td><span class="badge badge-${ad.type || 'rewarded'}">${ad.type || '—'}</span></td>
+        <td><span style="color:var(--accent-light);font-weight:500">${ad.imp.toLocaleString()}</span></td>
+        <td><span style="color:var(--teal)">${ad.clk.toLocaleString()}</span></td>
+        <td><span style="color:var(--green)">${ctr}</span></td>
+      </tr>`;
+  }).join('');
+}
+
+function renderEventsFeed(events, adNames) {
+  const feed = document.getElementById('aEventsFeed');
+  if (!events.length) {
+    feed.innerHTML = `<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:24px 0">No events in this period</div>`;
+    return;
+  }
+
+  feed.innerHTML = events.map(e => {
+    const isImp  = e.type === 'impression';
+    const adName = adNames[e.ad_id]?.name || e.ad_id?.slice(0, 8) + '…';
+    const time   = new Date(e.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="event-item">
+        <div class="${isImp ? 'event-dot-imp' : 'event-dot-clk'}" aria-hidden="true"></div>
+        <span class="event-type">${isImp ? 'impression' : 'click'}</span>
+        <span class="event-id" title="${escapeHtmlAnalytics(adName)}">${escapeHtmlAnalytics(adName)}</span>
+        <span class="event-time">${time}</span>
+      </div>`;
+  }).join('');
+}
+
+function escapeHtmlAnalytics(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Reload analytics when game changes
+const _origSelectGame = window.selectGame;
+if (typeof _origSelectGame === 'function') {
+  // dashboard.js exposes selectGame globally — patch it after load
+  document.addEventListener('DOMContentLoaded', () => {
+    const sel = window.selectGame;
+    window.selectGame = function(game, index) {
+      sel(game, index);
+      // If analytics view is active, reload it for the new game
+      if (document.getElementById('view-analytics')?.classList.contains('active')) {
+        loadAnalytics(game.id);
+      }
+    };
+  });
+}
+</script>
+
+<script src="assets/js/dashboard.js"></script>
+<script src="assets/js/ads.js"></script>
+<script src="assets/js/upload.js"></script>
+<script src="assets/js/api.js"></script>
+
+</body>
+</html>
