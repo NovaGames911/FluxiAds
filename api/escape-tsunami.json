@@ -1,0 +1,25 @@
+{
+  "RewardedAds": {
+    "mixAds": true,
+    "mediaPacks": [
+      {
+        "id": "6e6de56b-114c-4cf4-9cb4-52e3e2a66d41",
+        "videoURL": "https://novagames911.github.io/NovaGames/escape.mp4",
+        "imageURL": "https://novagames911.github.io/NovaGames/panel.jpg",
+        "webURL": "https://play.google.com/store/search?q=last%20war&c=apps",
+        "priority": 1
+      }
+    ]
+  },
+  "InterstitialAds": {
+    "mixAds": true,
+    "mediaPacks": [
+      {
+        "id": "042835a8-1090-441c-b783-e765f00b2b59",
+        "imageURL": "https://novagames911.github.io/NovaGames/panel.jpg",
+        "webURL": "https://play.google.com/store/search?q=last%20war&c=apps",
+        "priority": 1
+      }
+    ]
+  }
+}
