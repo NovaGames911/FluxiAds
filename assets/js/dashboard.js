@@ -381,16 +381,44 @@ function escapeHtml(str) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+// Use sb.auth.getSession() directly — do NOT poll window.currentUser.
+// `let currentUser` in the dashboard.html inline script is block-scoped and is
+// NOT a window property, so window.currentUser is always undefined at poll time.
+
 console.log('[FluxiAds] dashboard.js loaded');
 
-(function init() {
-  function tryLoad() {
-    if (window.currentUser) {
-      console.log('[FluxiAds] currentUser ready, calling loadGames()');
-      loadGames();
-    } else {
-      setTimeout(tryLoad, 80);
+(async function init() {
+  try {
+    const { data: { session }, error } = await sb.auth.getSession();
+
+    if (error) {
+      console.error('[FluxiAds] getSession error:', error);
+      return;
     }
+
+    if (!session) {
+      console.warn('[FluxiAds] No active session — redirecting to login');
+      window.location.replace('index.html');
+      return;
+    }
+
+    console.log('[FluxiAds] Session confirmed, user:', session.user.email);
+
+    // Expose on window so other modules (ads.js, api.js) can read it
+    window.currentUser    = session.user;
+    window.currentSession = session;
+
+    // Sync sidebar user display (dashboard.html inline script may also do this,
+    // but we own it here to guarantee it runs after session is confirmed)
+    const email = session.user.email || '';
+    const emailEl  = document.getElementById('userEmail');
+    const avatarEl = document.getElementById('userAvatar');
+    if (emailEl)  emailEl.textContent  = email;
+    if (avatarEl) avatarEl.textContent = email.slice(0, 2).toUpperCase();
+
+    await loadGames();
+
+  } catch (err) {
+    console.error('[FluxiAds] init() uncaught error:', err);
   }
-  tryLoad();
 })();

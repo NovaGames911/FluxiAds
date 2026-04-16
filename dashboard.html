@@ -1977,21 +1977,9 @@
 // Data loading wired in dashboard.js / ads.js (future steps)
 
 // ── Auth guard ────────────────────────────────────
-let currentUser = null;
-let currentSession = null;
-
-(async () => {
-  const session = await requireAuth();
-  if (!session) return;
-  currentSession = session;
-  currentUser = session.user;
-
-  // Populate user info in sidebar
-  const email = currentUser.email || '';
-  document.getElementById('userEmail').textContent = email;
-  const initials = email.slice(0, 2).toUpperCase();
-  document.getElementById('userAvatar').textContent = initials;
-})();
+// Session confirmation, user display, and loadGames() are all handled in
+// dashboard.js via sb.auth.getSession() — keeping it in one place avoids
+// the race condition caused by `let currentUser` not being a window property.
 
 // ── Nav view switching ────────────────────────────
 const navItems = document.querySelectorAll('.nav-item[data-view]');
